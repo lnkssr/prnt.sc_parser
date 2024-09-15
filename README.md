@@ -24,7 +24,7 @@ The scraper is optimized for asynchronous operation, supporting multiple concurr
 
 1. Clone the repository:
    ```bash
-   git clone git@github.com:lnkssr/prnt.sc_parser.git
+   git clone https://github.com/lnkssr/prnt.sc_parser.git
    cd print.sc_parser
    ```
 
