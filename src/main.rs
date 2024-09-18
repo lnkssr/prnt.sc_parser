@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio;
 use tokio::sync::Semaphore;
+use colored::*;
 
 const MAX_CONCURRENT_REQUESTS: usize = 10;
 const USER_AGENTS: &[&str] = &[
@@ -41,8 +42,8 @@ async fn fetch_and_parse_image(
 
     if let Some(image_url) = image_url {
         if image_url.starts_with("http") {
-            println!("[+] Image found for token {}. Downloading...", url);
-
+            println!("[+] Image found for token {}. Downloading...", url.green());
+            
             let img = client.get(&image_url).send().await?.bytes().await?;
             let file_name = url.split('/').last().unwrap_or("image");
             let file_path = format!(
@@ -54,10 +55,10 @@ async fn fetch_and_parse_image(
             let mut file = File::create(file_path)?;
             file.write_all(&img)?;
         } else {
-            println!("[-] No valid image found for token {}", url);
+            println!("[-] No valid image found for token {}", url.red());
         }
     } else {
-        println!("[-] Could not retrieve image for token {}", url);
+        println!("[-] Could not retrieve image for token {}", url.red());
     }
 
     Ok(())
