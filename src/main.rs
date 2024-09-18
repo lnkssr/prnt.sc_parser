@@ -1,3 +1,4 @@
+use rand::prelude::IteratorRandom;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
@@ -10,15 +11,13 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio;
 use tokio::sync::Semaphore;
-use rand::prelude::IteratorRandom;
 
 const MAX_CONCURRENT_REQUESTS: usize = 10;
 const USER_AGENTS: &[&str] = &[
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:90.0) Gecko/20100101 Firefox/90.0",
-    "Mozilla/5.0 (Linux; Android 10; SM-G973U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36 SamsungBrowser/14.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.3",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.3",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.3",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:39.0) Gecko/20100101 Firefox/39.0",
+    "Mozilla/5.0 (Linux; Android 5.0; SAMSUNG-SM-G900A Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/2.1 Chrome/34.0.1847.76 Mobile Safari/537.36"
 ];
 
 async fn fetch_and_parse_image(
@@ -28,12 +27,7 @@ async fn fetch_and_parse_image(
     semaphore: Arc<Semaphore>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let _permit = semaphore.acquire().await?;
-    let resp = client
-        .get(&url)
-        .send()
-        .await?
-        .text()
-        .await?;
+    let resp = client.get(&url).send().await?.text().await?;
 
     let image_url = {
         let document = Html::parse_document(&resp);
@@ -60,10 +54,10 @@ async fn fetch_and_parse_image(
             let mut file = File::create(file_path)?;
             file.write_all(&img)?;
         } else {
-            println!("[+] No valid image found for token {}", url);
+            println!("[-] No valid image found for token {}", url);
         }
     } else {
-        println!("[+] Could not retrieve image for token {}", url);
+        println!("[-] Could not retrieve image for token {}", url);
     }
 
     Ok(())
