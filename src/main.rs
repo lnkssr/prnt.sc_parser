@@ -25,10 +25,9 @@ const USER_AGENTS: &[&str] = &[
 
 fn check_and_delete_invalid_image(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::open(file_path)?;
-    let mut content = Vec::new();  // Читаем файл как байтовый поток
+    let mut content = Vec::new();  
     file.read_to_end(&mut content)?;
 
-    // Преобразуем в строку только если это возможно
     if let Ok(content_str) = String::from_utf8(content) {
         if content_str.contains("<head><title>404 Not Found</title></head>") {
             println!("[!] Invalid image (404 page) detected. Deleting file: {}", file_path.red());
