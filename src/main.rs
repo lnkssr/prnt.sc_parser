@@ -12,6 +12,8 @@ use std::time::Duration;
 use tokio;
 use tokio::sync::Semaphore;
 use colored::*;
+use std::fs::remove_file; 
+use std::io::Read;       
 
 const MAX_CONCURRENT_REQUESTS: usize = 10;
 const USER_AGENTS: &[&str] = &[
@@ -20,6 +22,24 @@ const USER_AGENTS: &[&str] = &[
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:39.0) Gecko/20100101 Firefox/39.0",
     "Mozilla/5.0 (Linux; Android 5.0; SAMSUNG-SM-G900A Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/2.1 Chrome/34.0.1847.76 Mobile Safari/537.36"
 ];
+
+fn check_and_delete_invalid_image(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut file = File::open(file_path)?;
+    let mut content = Vec::new();  // Читаем файл как байтовый поток
+    file.read_to_end(&mut content)?;
+
+    // Преобразуем в строку только если это возможно
+    if let Ok(content_str) = String::from_utf8(content) {
+        if content_str.contains("<head><title>404 Not Found</title></head>") {
+            println!("[!] Invalid image (404 page) detected. Deleting file: {}", file_path.red());
+            remove_file(file_path)?;
+        }
+    } else {
+        println!("[+] Image found for token {}. Validated...", file_path.green());
+    }
+
+    Ok(())
+}
 
 async fn fetch_and_parse_image(
     client: Arc<Client>,
@@ -43,17 +63,33 @@ async fn fetch_and_parse_image(
     if let Some(image_url) = image_url {
         if image_url.starts_with("http") {
             println!("[+] Image found for token {}. Downloading...", url.green());
-            
-            let img = client.get(&image_url).send().await?.bytes().await?;
-            let file_name = url.split('/').last().unwrap_or("image");
-            let file_path = format!(
-                "{}/{}{}",
-                output_dir,
-                file_name,
-                &image_url[image_url.rfind('.').unwrap_or(0)..]
-            );
-            let mut file = File::create(file_path)?;
-            file.write_all(&img)?;
+
+            let img_response = client.get(&image_url).send().await;
+
+            // Handle the image response
+            match img_response {
+                Ok(img) => {
+                    let img_bytes = img.bytes().await?;
+
+                    let file_name = url.split('/').last().unwrap_or("image");
+                    let file_path = format!(
+                        "{}/{}{}",
+                        output_dir,
+                        file_name,
+                        &image_url[image_url.rfind('.').unwrap_or(0)..]
+                    );
+
+                    let mut file = File::create(&file_path)?;
+                    file.write_all(&img_bytes)?;
+
+                    // Check and delete the image if it's a 404 page
+                    check_and_delete_invalid_image(&file_path)?;
+                }
+                Err(_) => {
+                    // No output if the image cannot be read or downloaded
+                    return Ok(());
+                }
+            }
         } else {
             println!("[-] No valid image found for token {}", url.red());
         }
