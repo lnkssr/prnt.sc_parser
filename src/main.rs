@@ -1,3 +1,4 @@
+use colored::*;
 use rand::prelude::IteratorRandom;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
@@ -5,15 +6,14 @@ use rand::{Rng, SeedableRng};
 use reqwest::{header::HeaderValue, Client};
 use scraper::{Html, Selector};
 use std::env;
+use std::fs::remove_file;
 use std::fs::File;
+use std::io::Read;
 use std::io::Write;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio;
 use tokio::sync::Semaphore;
-use colored::*;
-use std::fs::remove_file; 
-use std::io::Read;       
 
 const MAX_CONCURRENT_REQUESTS: usize = 10;
 const USER_AGENTS: &[&str] = &[
@@ -25,16 +25,22 @@ const USER_AGENTS: &[&str] = &[
 
 fn check_and_delete_invalid_image(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::open(file_path)?;
-    let mut content = Vec::new();  
+    let mut content = Vec::new();
     file.read_to_end(&mut content)?;
 
     if let Ok(content_str) = String::from_utf8(content) {
         if content_str.contains("<head><title>404 Not Found</title></head>") {
-            println!("[!] Invalid image (404 page) detected. Deleting file: {}", file_path.red());
+            println!(
+                "[!] Invalid image (404 page) detected. Deleting file: {}",
+                file_path.red()
+            );
             remove_file(file_path)?;
         }
     } else {
-        println!("[+] Image found for token {}. Validated...", file_path.green());
+        println!(
+            "[+] Image found for token {}. Validated...",
+            file_path.green()
+        );
     }
 
     Ok(())
@@ -65,7 +71,6 @@ async fn fetch_and_parse_image(
 
             let img_response = client.get(&image_url).send().await;
 
-            // Handle the image response
             match img_response {
                 Ok(img) => {
                     let img_bytes = img.bytes().await?;
@@ -81,11 +86,9 @@ async fn fetch_and_parse_image(
                     let mut file = File::create(&file_path)?;
                     file.write_all(&img_bytes)?;
 
-                    // Check and delete the image if it's a 404 page
                     check_and_delete_invalid_image(&file_path)?;
                 }
                 Err(_) => {
-                    // No output if the image cannot be read or downloaded
                     return Ok(());
                 }
             }
