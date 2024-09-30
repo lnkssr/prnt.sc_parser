@@ -32,7 +32,7 @@ fn check_and_delete_invalid_image(file_path: &str) -> Result<(), Box<dyn std::er
         if content_str.contains("<head><title>404 Not Found</title></head>") {
             println!(
                 "[!] Invalid image (404 page) detected. Deleting file: {}",
-                file_path.red()
+                file_path.blue()
             );
             remove_file(file_path)?;
         }
