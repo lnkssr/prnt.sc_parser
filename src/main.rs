@@ -27,7 +27,7 @@ fn check_and_delete_invalid_image(file_path: &str) -> Result<(), Box<dyn std::er
     let mut content = Vec::new();
     file.read_to_end(&mut content)?;
 
-    if let Ok(content_str) = String::from_utf8(content) {
+    if let Ok(content_str) = String::from_utf8(content.clone()) {
         if content_str.contains("<head><title>404 Not Found</title></head>") {
             println!(
                 "[!] Invalid image (404 page) detected. Deleting file: {}",
@@ -35,6 +35,12 @@ fn check_and_delete_invalid_image(file_path: &str) -> Result<(), Box<dyn std::er
             );
             remove_file(file_path)?;
         }
+    } else if is_file_size_503_bits(&content) {
+        println!(
+            "[!] File size is exactly 503 bits. Deleting file: {}",
+            file_path.blue()
+        );
+        let _ = remove_file(file_path);
     } else {
         println!(
             "[+] Image found for token {}. Validated...",
@@ -99,6 +105,13 @@ async fn fetch_and_parse_image(
     }
 
     Ok(())
+}
+
+fn is_file_size_503_bits(data: &[u8])-> bool {
+    const TARGET_SIZE_BITS: usize = 4024;
+    const TARGET_SIZE_BYTES: usize = (TARGET_SIZE_BITS + 7) / 8;
+
+    data.len() == TARGET_SIZE_BYTES
 }
 
 async fn parse(
