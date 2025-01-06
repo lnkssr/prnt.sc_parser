@@ -12,7 +12,6 @@ use std::io::Read;
 use std::io::Write;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio;
 use tokio::sync::Semaphore;
 
 const MAX_CONCURRENT_REQUESTS: usize = 10;
