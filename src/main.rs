@@ -107,7 +107,7 @@ async fn fetch_and_parse_image(
     Ok(())
 }
 
-fn is_file_size_503_bits(data: &[u8])-> bool {
+fn is_file_size_503_bits(data: &[u8]) -> bool {
     const TARGET_SIZE_BITS: usize = 4024;
     const TARGET_SIZE_BYTES: usize = (TARGET_SIZE_BITS + 7) / 8;
 
