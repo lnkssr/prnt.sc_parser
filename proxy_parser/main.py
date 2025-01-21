@@ -1,22 +1,23 @@
-import requests
+#!/usr/bin/env python3
 
-def check_http_proxy(ip, port, timeout=5):
+import requests
+import concurrent.futures
+
+timeout = 0.5
+
+def check_http_proxy(ip, port, timeout=timeout):
     proxies = {
         'http': f'http://{ip}:{port}',
         'https': f'http://{ip}:{port}'
     }
-
     try:
-        # Проверяем доступность сайта
-        response = requests.get('http://google.com', proxies=proxies, timeout=timeout)
+        response = requests.get('http://httpbin.org/ip', proxies=proxies, timeout=timeout)
         if response.status_code == 200:
-            print(f"Прокси работает. Ответ от httpbin.org: {response.text}")
-            return True
-        else:
-            print(f"Прокси не работает. Код ответа: {response.status_code}")
-    except requests.RequestException as e:
-        print(f"Ошибка запроса: {e}")
-    return False
+            print(f"Прокси работает: {ip}:{port}")
+            return f"{ip}:{port}"
+    except requests.RequestException:
+        pass
+    return None
 
 def download_proxy_list(url):
     response = requests.get(url)
@@ -25,25 +26,25 @@ def download_proxy_list(url):
     else:
         raise Exception(f"Ошибка при скачивании: {response.status_code}")
 
-def validate_proxies(proxy_list, output_file):
+def validate_proxies(proxy_list, output_file, max_threads=500):
+    active_proxies = []
+    with concurrent.futures.ThreadPoolExecutor(max_threads) as executor:
+        futures = {executor.submit(check_http_proxy, *line.strip().split(':')): line for line in proxy_list if line.strip()}
+        for future in concurrent.futures.as_completed(futures):
+            result = future.result()
+            if result:
+                active_proxies.append(result)
+    
     with open(output_file, 'w') as f:
-        for line in proxy_list:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                ip, port = line.split(':')
-                if check_http_proxy(ip, int(port)):
-                    f.write(line + '\n')  # Запись в файл в реальном времени
-                else:
-                    print(f"Прокси не активен: {line}")
-            except ValueError:
-                print(f"Некорректная строка: {line}")
+        for proxy in active_proxies:
+            f.write(proxy + '\n')
+    
+    print("Проверка завершена, активные прокси записаны в файл.")
+    return active_proxies
 
-url = 'https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt'
+url = "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/refs/heads/master/socks5.txt"
 output_file = 'active_proxies.txt'
 
 proxy_list = download_proxy_list(url)
-validate_proxies(proxy_list, output_file)
-
-print("Проверка завершена, активные прокси записаны в файл.")
+active_proxies = validate_proxies(proxy_list, output_file)
+print(f"Найдено {len(active_proxies)} активных прокси.")  
