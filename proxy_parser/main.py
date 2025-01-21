@@ -3,7 +3,7 @@
 import requests
 import concurrent.futures
 
-timeout = 0.5
+timeout = 0.1
 
 def check_http_proxy(ip, port, timeout=timeout):
     proxies = {
