@@ -1,4 +1,5 @@
 /target
 /proxy_parser/venv
+/proxy_parser/active_proxies.txt
 /output
 .env
